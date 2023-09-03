@@ -24,6 +24,20 @@
 #include <iostream>
 #include "tcp-rl-env.h"
 
+inline uint64_t get_cpu_cycle_x86()
+{
+#ifdef __x86_64__
+    unsigned long lo, hi;
+    __asm__ __volatile__("rdtsc"
+                         : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) + lo;
+#else
+    return 0;
+#endif
+}
+
+std::vector<uint64_t> action_durations;
+
 namespace ns3
 {
 
@@ -132,9 +146,19 @@ void TcpTimeStepEnv::ScheduleNotify()
 //            << " segmentAcked=" << env->segmentsAcked
 //            << " bytesInFlightSum=" << bytesInFlightSum
 //            << std::endl;
+
+  // For benchmarking: here get CPU cycle
+  uint64_t cpu_cycle_before = get_cpu_cycle_x86();
+
   msgInterface->CppSendEnd();
 
   msgInterface->CppRecvBegin();
+
+  // For benchmarking: here get CPU cycle
+  uint64_t cpu_cycle_after = get_cpu_cycle_x86();
+  // For benchmarking: store CPU cycle difference
+  action_durations.push_back(cpu_cycle_after - cpu_cycle_before);
+
   auto act = msgInterface->GetPy2CppStruct();
   m_new_cWnd = act->new_cWnd;
   m_new_ssThresh = act->new_ssThresh;

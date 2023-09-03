@@ -49,6 +49,20 @@
 
 #include "ns3/ai-module.h"
 
+// For benchmarking
+uint64_t average(std::vector<uint64_t> const& v) {
+    if (v.empty()) {
+        return 0;
+    }
+    auto count = v.size();
+    uint64_t sum = 0;
+    for (auto num : v) {
+        sum += num;
+    }
+    return sum / count;
+}
+extern std::vector<uint64_t> action_durations;
+
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("rl-tcp-example");
@@ -285,6 +299,19 @@ main (int argc, char *argv[])
     }
 
   PrintRxCount ();
+
+  // For benchmarking
+  uint64_t action_cycles_mean = average(action_durations);
+  uint64_t accum = 0;
+  std::for_each(std::begin(action_durations), std::end(action_durations),
+                [&](const uint64_t cycles){
+                    accum += (cycles - action_cycles_mean) * (cycles - action_cycles_mean);
+                });
+  auto action_cycles_stddev = sqrt(accum / (action_durations.size() - 1));
+  std::cout << "action_cycles_mean " << action_cycles_mean
+            << " action_cycles_stddev " << action_cycles_stddev
+            << std::endl;
+
   Simulator::Destroy ();
   return 0;
 }
