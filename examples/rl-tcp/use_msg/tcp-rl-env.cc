@@ -157,7 +157,11 @@ void TcpTimeStepEnv::ScheduleNotify()
   // For benchmarking: here get CPU cycle
   uint64_t cpu_cycle_after = get_cpu_cycle_x86();
   // For benchmarking: store CPU cycle difference
-  action_durations.push_back(cpu_cycle_after - cpu_cycle_before);
+  uint64_t diff = cpu_cycle_after - cpu_cycle_before;
+  if (diff < 1000000)   // machine-specific; to remove outliers
+  {
+    action_durations.push_back(diff);
+  }
 
   auto act = msgInterface->GetPy2CppStruct();
   m_new_cWnd = act->new_cWnd;
