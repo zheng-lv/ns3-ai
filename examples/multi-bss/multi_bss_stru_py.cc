@@ -1,17 +1,18 @@
+#include "multi-bss.h"
+
+#include <ns3/ai-module.h>
+
 #include <iostream>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl_bind.h>
-
-#include <ns3/ai-module.h>
-#include "multi-bss.h"
 
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(ns3::Ns3AiMsgInterfaceImpl<Env, Act>::Cpp2PyMsgVector);
 PYBIND11_MAKE_OPAQUE(ns3::Ns3AiMsgInterfaceImpl<Env, Act>::Py2CppMsgVector);
 
-PYBIND11_MODULE(ns3ai_multibss_py, m) {
-    
+PYBIND11_MODULE(ns3ai_multibss_stru_py, m) {
+
     py::class_<std::array<double, 5>>(m, "RxPowerArray")
         .def(py::init<>())
         .def("size", &std::array<double, 5>::size)

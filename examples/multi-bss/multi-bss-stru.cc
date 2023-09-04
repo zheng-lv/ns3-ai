@@ -16,6 +16,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+#include "multi-bss.h"
+#include "tgax-residential-propagation-loss-model.h"
+
+#include "ns3/ai-module.h"
 #include "ns3/ampdu-subframe-header.h"
 #include "ns3/ap-wifi-mac.h"
 #include "ns3/application-container.h"
@@ -45,7 +49,6 @@
 #include "ns3/mobility-module.h"
 #include "ns3/multi-model-spectrum-channel.h"
 #include "ns3/node-list.h"
-#include "ns3/ai-module.h"
 #include "ns3/on-off-helper.h"
 #include "ns3/packet-sink-helper.h"
 #include "ns3/packet-sink.h"
@@ -85,9 +88,6 @@
 #include <sstream>
 #include <unordered_map>
 #include <vector>
-
-#include "multi-bss.h"
-#include "tgax-residential-propagation-loss-model.h"
 
 /// Avoid std::numbers::pi because it's C++20
 #define PI 3.1415926535
@@ -835,9 +835,9 @@ PrintPythonPlotCSV(std::string filename)
             // size_t pos = configString.find(',');
             // configString = configString.substr(pos + 1);
             // size_t pos2 = configString.find(',');
-//            std::cout << "CCaSensitivity: " << m_ccaSensitivity << std::endl;
+            //            std::cout << "CCaSensitivity: " << m_ccaSensitivity << std::endl;
             // double m_ccaSensitivity = std::stoi(configString.substr(0, pos2));
-//            std::cout << "apTxPower: " << m_txPower << std::endl;
+            //            std::cout << "apTxPower: " << m_txPower << std::endl;
             // double m_txPower = std::stoi(configString.substr(pos2 + 1));
             // Formula to draw radius of circle
             double max_loss = -(m_ccaSensitivity - m_txPower); // TODO: fix to specific tx power
@@ -1002,26 +1002,26 @@ MeasureIntervalThroughputHolDelay()
     Simulator::ScheduleNow(&RestartIntervalThroughputHolDelay);
     Simulator::Schedule(Seconds(1), &MeasureIntervalThroughputHolDelay);
 
-//    // Set position for Nodes
-//    for (uint32_t i = 0; i < wifiNodes.GetN(); i++)
-//    {
-//        double x = 0;
-//        double y = 0;
-//
-//        x = randomX->GetValue() + ((i % apNodeCount) * boxSize);
-//        y = randomY->GetValue();
-//
-//        Vector l1(x, y, 1.5);
-//        Ptr<Object> object = wifiNodes.Get(i);
-//        Ptr<MobilityModel> model = object->GetObject<MobilityModel>();
-//        model->SetPosition(l1);
-//
-//        std::cout << "Node" << wifiNodes.Get(i)->GetId() << " " << x << "," << y << std::endl;
-//        // std::cout << "Points intersect how many walls? " <<
-//        // building->WallInLOS(l1, l2)
-//        //           << std::endl;
-//    }
-//    PrintPythonPlotCSV("box.csv");
+    //    // Set position for Nodes
+    //    for (uint32_t i = 0; i < wifiNodes.GetN(); i++)
+    //    {
+    //        double x = 0;
+    //        double y = 0;
+    //
+    //        x = randomX->GetValue() + ((i % apNodeCount) * boxSize);
+    //        y = randomY->GetValue();
+    //
+    //        Vector l1(x, y, 1.5);
+    //        Ptr<Object> object = wifiNodes.Get(i);
+    //        Ptr<MobilityModel> model = object->GetObject<MobilityModel>();
+    //        model->SetPosition(l1);
+    //
+    //        std::cout << "Node" << wifiNodes.Get(i)->GetId() << " " << x << "," << y << std::endl;
+    //        // std::cout << "Points intersect how many walls? " <<
+    //        // building->WallInLOS(l1, l2)
+    //        //           << std::endl;
+    //    }
+    //    PrintPythonPlotCSV("box.csv");
 }
 
 // // std::map<uint32_t, std::vector<>>;
@@ -2821,7 +2821,7 @@ main(int argc, char* argv[])
     Simulator::Schedule(Seconds(10), &RestartIntervalThroughputHolDelay);
     Simulator::Schedule(Seconds(1.5), &CheckAssociation);
     Simulator::Schedule(Seconds(10), &RestartCalc);
-//    Simulator::Schedule(Seconds(10), &TrackTime);
+    //    Simulator::Schedule(Seconds(10), &TrackTime);
     Simulator::Stop(Seconds((10) + duration));
     Simulator::Run();
 
@@ -3188,10 +3188,10 @@ main(int argc, char* argv[])
     {
         NS_ABORT_MSG("There was a station dessasociated");
     }
-//    if (drlCca)
-//    {
-//        rlAlgo.SetFinish();
-//    }
+    //    if (drlCca)
+    //    {
+    //        rlAlgo.SetFinish();
+    //    }
     PrintPythonPlotCSV("box.csv");
     Simulator::Destroy();
     return 0;

@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import ns3ai_multibss_py as py_binding
+import ns3ai_multibss_vec_py as py_binding
 from ns3ai_utils import Experiment
 import sys
 import traceback
@@ -205,7 +205,7 @@ vr_constrant = 5
 vrtpt_cons = 14.7
 eta = 1
 
-exp = Experiment("ns3ai_multibss", "../../../../", py_binding,
+exp = Experiment("ns3ai_multibss_vec", "../../../../", py_binding,
                  handleFinish=True, useVector=True, vectorSize=n_total)
 msgInterface = exp.run(setting=ns3Settings, show_output=True)
 
