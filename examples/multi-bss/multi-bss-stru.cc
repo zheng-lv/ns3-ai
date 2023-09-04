@@ -89,6 +89,33 @@
 #include <unordered_map>
 #include <vector>
 
+// For benchmarking
+inline uint64_t get_cpu_cycle_x86()
+{
+#ifdef __x86_64__
+    unsigned long lo, hi;
+    __asm__ __volatile__("rdtsc"
+                         : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) + lo;
+#else
+    return 0;
+#endif
+}
+
+std::vector<uint64_t> cpp2py_durations;
+
+uint64_t average(std::vector<uint64_t> const& v) {
+    if (v.empty()) {
+        return 0;
+    }
+    auto count = v.size();
+    uint64_t sum = 0;
+    for (auto num : v) {
+        sum += num;
+    }
+    return sum / count;
+}
+
 /// Avoid std::numbers::pi because it's C++20
 #define PI 3.1415926535
 
@@ -935,43 +962,61 @@ MeasureIntervalThroughputHolDelay()
         CreateObject<TgaxResidentialPropagationLossModel>();
     GetRxPower(propModel);
 
-    msgInterface->CppSendBegin();
+    double nextCca;
+
+    // For benchmarking: here get CPU cycle
+    uint64_t cpu_cycle_before = get_cpu_cycle_x86();
+
     for (size_t i = 0; i < wifiNodes.GetN(); i++)
     {
+        msgInterface->CppSendBegin();
         uint32_t txNodeId = wifiNodes.Get(i)->GetId();
-        auto &env_struct = msgInterface->GetCpp2PyVector()->at(txNodeId);
-        env_struct.txNode = txNodeId;
-        env_struct.mcs = nodeMcs[txNodeId];
-        env_struct.holDelay = std::get<0>(nodeDelays[txNodeId]);
+        auto env_struct = msgInterface->GetCpp2PyStruct();
+        env_struct->txNode = txNodeId;
+        env_struct->mcs = nodeMcs[txNodeId];
+        env_struct->holDelay = std::get<0>(nodeDelays[txNodeId]);
         if (txNodeId >= N_BSS)  // STAs
         {
-            env_struct.throughput = (intervalBytesReceived.find(txNodeId)->second * 8) /
+            env_struct->throughput = (intervalBytesReceived.find(txNodeId)->second * 8) /
                                     static_cast<double>(Seconds(1).GetMicroSeconds());
         }
         else
         {
             // Only count for UL traffic
-            env_struct.throughput = 0;
+            env_struct->throughput = 0;
         }
-        std::cout << "CPP send: txnode " << txNodeId << " tpt " << env_struct.throughput << std::endl;
+        std::cout << "CPP send: txnode " << txNodeId << " tpt " << env_struct->throughput << std::endl;
         for (auto rxNodePower : nodeRxPower[txNodeId])
         {
-            NS_ASSERT(rxNodePower.first % N_BSS == 0);  // only record rx node in first BSS
+            NS_ASSERT(rxNodePower.first % N_BSS == 0); // only record rx node in first BSS
             if (rxNodePower.first == txNodeId)
             {
-                env_struct.rxPower[rxNodePower.first / N_BSS] = 0;
+                env_struct->rxPower[rxNodePower.first / N_BSS] = 0;
             }
             else
             {
-                env_struct.rxPower[rxNodePower.first / N_BSS] = rxNodePower.second;
+                env_struct->rxPower[rxNodePower.first / N_BSS] = rxNodePower.second;
             }
         }
+        msgInterface->CppSendEnd();
     }
-    msgInterface->CppSendEnd();
 
+    // Only get once
     msgInterface->CppRecvBegin();
-    double nextCca = msgInterface->GetPy2CppVector()->at(0).newCcaSensitivity;
+    nextCca = msgInterface->GetPy2CppStruct()->newCcaSensitivity;
+    uint64_t cpu_cycle_after = msgInterface->GetPy2CppStruct()->cpu_cycle_after;
     msgInterface->CppRecvEnd();
+
+    // For benchmarking: store CPU cycle difference
+    uint64_t diff = cpu_cycle_after - cpu_cycle_before;
+    std::cout << "****** CPU *******\nbefore " << cpu_cycle_before
+              << " after " << cpu_cycle_after
+              << " diff " << diff
+              << std::endl;
+    if (diff < 1000000)   // machine-specific; to remove outliers
+    {
+        cpp2py_durations.push_back(diff);
+    }
 
     std::cout << "At " << Simulator::Now().GetMilliSeconds() << "ms:" << std::endl;
 
@@ -1001,49 +1046,7 @@ MeasureIntervalThroughputHolDelay()
 
     Simulator::ScheduleNow(&RestartIntervalThroughputHolDelay);
     Simulator::Schedule(Seconds(1), &MeasureIntervalThroughputHolDelay);
-
-    //    // Set position for Nodes
-    //    for (uint32_t i = 0; i < wifiNodes.GetN(); i++)
-    //    {
-    //        double x = 0;
-    //        double y = 0;
-    //
-    //        x = randomX->GetValue() + ((i % apNodeCount) * boxSize);
-    //        y = randomY->GetValue();
-    //
-    //        Vector l1(x, y, 1.5);
-    //        Ptr<Object> object = wifiNodes.Get(i);
-    //        Ptr<MobilityModel> model = object->GetObject<MobilityModel>();
-    //        model->SetPosition(l1);
-    //
-    //        std::cout << "Node" << wifiNodes.Get(i)->GetId() << " " << x << "," << y << std::endl;
-    //        // std::cout << "Points intersect how many walls? " <<
-    //        // building->WallInLOS(l1, l2)
-    //        //           << std::endl;
-    //    }
-    //    PrintPythonPlotCSV("box.csv");
 }
-
-// // std::map<uint32_t, std::vector<>>;
-
-// /**
-//  * PHY Rx trace.
-//  *
-//  * \param context The context.
-//  * \param p The packet.
-//  * \param power The Rx power.
-//  */
-// void
-// PhyRxTrace(std::string context, Ptr<const Packet> p, RxPowerWattPerChannelBand power)
-// {
-//     for (auto bandPower : power)
-//     {
-//         std::cout << "PHY-RX-START time=" << Simulator::Now()
-//                   << " node=" << ContextToNodeId(context) << " size=" << p->GetSize()
-//                   << " Band Start " << bandPower.first.first << " Band end "
-//                   << bandPower.first.second << " rxPower: " << bandPower.second << std::endl;
-//     }
-// }
 
 std::vector<uint64_t> pid_r_packets;
 
@@ -1752,7 +1755,7 @@ int
 main(int argc, char* argv[])
 {
     Ns3AiMsgInterface::Get()->SetIsMemoryCreator(false);
-    Ns3AiMsgInterface::Get()->SetUseVector(true);
+    Ns3AiMsgInterface::Get()->SetUseVector(false);
     Ns3AiMsgInterface::Get()->SetHandleFinish(true);
     duration = 100;    ///< duration (in seconds)
     bool pcap = false; ///< Flag to enable/disable PCAP files generation
@@ -3193,6 +3196,19 @@ main(int argc, char* argv[])
     //        rlAlgo.SetFinish();
     //    }
     PrintPythonPlotCSV("box.csv");
+    
+    // For benchmarking
+    uint64_t cpp2py_cycles_mean = average(cpp2py_durations);
+    uint64_t accum = 0;
+    std::for_each(std::begin(cpp2py_durations), std::end(cpp2py_durations),
+                  [&](const uint64_t cycles){
+                      accum += (cycles - cpp2py_cycles_mean) * (cycles - cpp2py_cycles_mean);
+                  });
+    auto cpp2py_cycles_stddev = sqrt(accum / (cpp2py_durations.size() - 1));
+    std::cout << "cpp2py_cycles_mean " << cpp2py_cycles_mean
+              << " cpp2py_cycles_stddev " << cpp2py_cycles_stddev
+              << std::endl;
+    
     Simulator::Destroy();
     return 0;
 }

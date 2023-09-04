@@ -20,6 +20,7 @@ struct Env
 struct Act
 {
     double newCcaSensitivity;
+    uint64_t cpu_cycle_after;
 };
 
 #endif // NS3_MULTI_BSS_H

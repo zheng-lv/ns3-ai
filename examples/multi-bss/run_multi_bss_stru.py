@@ -12,6 +12,7 @@ import ns3ai_multibss_stru_py as py_binding
 from ns3ai_utils import Experiment
 import sys
 import traceback
+import py_cycle
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -205,32 +206,37 @@ vr_constrant = 5
 vrtpt_cons = 14.7
 eta = 1
 
-exp = Experiment("ns3ai_multibss_vec", "../../../../", py_binding,
-                 handleFinish=True, useVector=True, vectorSize=n_total)
+exp = Experiment("ns3ai_multibss_stru", "../../../../", py_binding,
+                 handleFinish=True, useVector=False)
 msgInterface = exp.run(setting=ns3Settings, show_output=True)
 
 try:
     while True:
-        # Get current state from C++
-        msgInterface.PyRecvBegin()
+        throughput = 0
+        for i in range(n_total):
+            # Get current state from C++
+            msgInterface.PyRecvBegin()
+            if msgInterface.PyGetFinished():
+                break
+            txNode = msgInterface.GetCpp2PyStruct().txNode
+            # print("processing i {} txNode {}".format(i, txNode))
+            for j in range(n_sta+1):
+                state[j, txNode] = msgInterface.GetCpp2PyStruct().rxPower[j]
+            # state[:, txNode] = msgInterface.GetCpp2PyVector()[i].rxPower
+            if txNode % n_ap == 0:  # record mcs in BSS-0
+                state[int(txNode/n_ap)][-1] = msgInterface.GetCpp2PyStruct().mcs
+            if txNode == n_ap:     # record delay and tpt of the VR node
+                vrDelay = msgInterface.GetCpp2PyStruct().holDelay
+                vrThroughput = msgInterface.GetCpp2PyStruct().throughput
+            # Sum all nodes' throughput
+            throughput += msgInterface.GetCpp2PyStruct().throughput
+            msgInterface.PyRecvEnd()
+
+        cpu_cycle_after = py_cycle.getCycle()
+
         if msgInterface.PyGetFinished():
             print("Finished")
             break
-        throughput = 0
-        for i in range(n_total):
-            txNode = msgInterface.GetCpp2PyVector()[i].txNode
-            # print("processing i {} txNode {}".format(i, txNode))
-            for j in range(n_sta+1):
-                state[j, txNode] = msgInterface.GetCpp2PyVector()[i].rxPower[j]
-            # state[:, txNode] = msgInterface.GetCpp2PyVector()[i].rxPower
-            if txNode % n_ap == 0:  # record mcs in BSS-0
-                state[int(txNode/n_ap)][-1] = msgInterface.GetCpp2PyVector()[i].mcs
-            if txNode == n_ap:     # record delay and tpt of the VR node
-                vrDelay = msgInterface.GetCpp2PyVector()[i].holDelay
-                vrThroughput = msgInterface.GetCpp2PyVector()[i].throughput
-            # Sum all nodes' throughput
-            throughput += msgInterface.GetCpp2PyVector()[i].throughput
-        msgInterface.PyRecvEnd()
 
         print("step = {}, VR avg delay = {} ms, VR UL tpt = {} Mbps, total UL tpt = {} Mbps".format(
             times, vrDelay, vrThroughput, throughput
@@ -257,9 +263,10 @@ try:
 
         # put the action back to C++
         msgInterface.PySendBegin()
-        msgInterface.GetPy2CppVector()[0].newCcaSensitivity = -82 + action
+        msgInterface.GetPy2CppStruct().newCcaSensitivity = -82 + action
+        msgInterface.GetPy2CppStruct().cpu_cycle_after = cpu_cycle_after
         msgInterface.PySendEnd()
-        print("new CCA: {}".format(msgInterface.GetPy2CppVector()[0].newCcaSensitivity))
+        print("new CCA: {}".format(msgInterface.GetPy2CppStruct().newCcaSensitivity))
         times += 1
 
 except Exception as e:
