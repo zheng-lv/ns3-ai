@@ -12,6 +12,7 @@ import ns3ai_multibss_vec_py as py_binding
 from ns3ai_utils import Experiment
 import sys
 import traceback
+import py_cycle
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -232,6 +233,8 @@ try:
             throughput += msgInterface.GetCpp2PyVector()[i].throughput
         msgInterface.PyRecvEnd()
 
+        cpu_cycle_after = py_cycle.getCycle()
+
         print("step = {}, VR avg delay = {} ms, VR UL tpt = {} Mbps, total UL tpt = {} Mbps".format(
             times, vrDelay, vrThroughput, throughput
         ))
@@ -258,6 +261,7 @@ try:
         # put the action back to C++
         msgInterface.PySendBegin()
         msgInterface.GetPy2CppVector()[0].newCcaSensitivity = -82 + action
+        msgInterface.GetPy2CppVector()[0].cpu_cycle_after = cpu_cycle_after
         msgInterface.PySendEnd()
         print("new CCA: {}".format(msgInterface.GetPy2CppVector()[0].newCcaSensitivity))
         times += 1

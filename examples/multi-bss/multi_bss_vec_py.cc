@@ -40,6 +40,7 @@ PYBIND11_MODULE(ns3ai_multibss_vec_py, m) {
     py::class_<Act>(m, "PyActStruct")
         .def(py::init<>())
         .def_readwrite("newCcaSensitivity", &Act::newCcaSensitivity)
+        .def_readwrite("cpu_cycle_after", &Act::cpu_cycle_after)
         ;
 
     py::class_<ns3::Ns3AiMsgInterfaceImpl<Env, Act>::Cpp2PyMsgVector>(m, "PyEnvVector")

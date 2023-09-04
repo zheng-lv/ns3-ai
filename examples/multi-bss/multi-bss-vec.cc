@@ -89,6 +89,33 @@
 #include <unordered_map>
 #include <vector>
 
+// For benchmarking
+inline uint64_t get_cpu_cycle_x86()
+{
+#ifdef __x86_64__
+    unsigned long lo, hi;
+    __asm__ __volatile__("rdtsc"
+                         : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) + lo;
+#else
+    return 0;
+#endif
+}
+
+std::vector<uint64_t> cpp2py_durations;
+
+uint64_t average(std::vector<uint64_t> const& v) {
+    if (v.empty()) {
+        return 0;
+    }
+    auto count = v.size();
+    uint64_t sum = 0;
+    for (auto num : v) {
+        sum += num;
+    }
+    return sum / count;
+}
+
 /// Avoid std::numbers::pi because it's C++20
 #define PI 3.1415926535
 
@@ -935,6 +962,9 @@ MeasureIntervalThroughputHolDelay()
         CreateObject<TgaxResidentialPropagationLossModel>();
     GetRxPower(propModel);
 
+    // For benchmarking: here get CPU cycle
+    uint64_t cpu_cycle_before = get_cpu_cycle_x86();
+
     msgInterface->CppSendBegin();
     for (size_t i = 0; i < wifiNodes.GetN(); i++)
     {
@@ -971,7 +1001,19 @@ MeasureIntervalThroughputHolDelay()
 
     msgInterface->CppRecvBegin();
     double nextCca = msgInterface->GetPy2CppVector()->at(0).newCcaSensitivity;
+    uint64_t cpu_cycle_after = msgInterface->GetPy2CppVector()->at(0).cpu_cycle_after;
     msgInterface->CppRecvEnd();
+
+    // For benchmarking: store CPU cycle difference
+    uint64_t diff = cpu_cycle_after - cpu_cycle_before;
+    std::cout << "****** CPU *******\nbefore " << cpu_cycle_before
+              << " after " << cpu_cycle_after
+              << " diff " << diff
+              << std::endl;
+    if (diff < 2000000)   // machine-specific; to remove outliers
+    {
+        cpp2py_durations.push_back(diff);
+    }
 
     std::cout << "At " << Simulator::Now().GetMilliSeconds() << "ms:" << std::endl;
 
@@ -3193,6 +3235,19 @@ main(int argc, char* argv[])
 //        rlAlgo.SetFinish();
 //    }
     PrintPythonPlotCSV("box.csv");
+
+    // For benchmarking
+    uint64_t cpp2py_cycles_mean = average(cpp2py_durations);
+    uint64_t accum = 0;
+    std::for_each(std::begin(cpp2py_durations), std::end(cpp2py_durations),
+                  [&](const uint64_t cycles){
+                      accum += (cycles - cpp2py_cycles_mean) * (cycles - cpp2py_cycles_mean);
+                  });
+    auto cpp2py_cycles_stddev = sqrt(accum / (cpp2py_durations.size() - 1));
+    std::cout << "cpp2py_cycles_mean " << cpp2py_cycles_mean
+              << " cpp2py_cycles_stddev " << cpp2py_cycles_stddev
+              << std::endl;
+
     Simulator::Destroy();
     return 0;
 }

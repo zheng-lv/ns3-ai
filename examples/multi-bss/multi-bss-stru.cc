@@ -1013,7 +1013,7 @@ MeasureIntervalThroughputHolDelay()
               << " after " << cpu_cycle_after
               << " diff " << diff
               << std::endl;
-    if (diff < 1000000)   // machine-specific; to remove outliers
+    if (diff < 2000000)   // machine-specific; to remove outliers
     {
         cpp2py_durations.push_back(diff);
     }
