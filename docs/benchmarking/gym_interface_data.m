@@ -47,13 +47,13 @@ for i = 1 : 2
     errorbar_x(:, i) = h(1, i).XEndPoints';
 end
 hold on;
-errorbar(errorbar_x, cpp2py_mean, cpp2py_stddev, 'LineStyle', 'none');
+errorbar(errorbar_x, cpp2py_mean, cpp2py_stddev, 'LineStyle', 'none', 'LineWidth', 2);
 hold off;
 ylim([0, 15e4]);
 legend({'ns3-gym', 'ns3-ai'});
-title('C++ to Python Transmission Time');
-xlabel('Test Case (seed number)');
-ylabel('CPU Cycles')
+title('C++ to Python Transmission Time', 'FontSize', 18);
+xlabel('Test Case (seed number)', 'FontSize', 16);
+ylabel('CPU Cycles', 'FontSize', 16)
 
 % Python to C++
 
@@ -64,10 +64,10 @@ for i = 1 : 2
     errorbar_x(:, i) = h(1, i).XEndPoints';
 end
 hold on;
-errorbar(errorbar_x, py2cpp_mean, py2cpp_stddev, 'LineStyle', 'none');
+eb = errorbar(errorbar_x, py2cpp_mean, py2cpp_stddev, 'LineStyle', 'none', 'LineWidth', 2);
 hold off;
 ylim([0, 15e4]);
 legend({'ns3-gym', 'ns3-ai'});
-title('Python to C++ Transmission Time');
-xlabel('Test Case (seed number)');
-ylabel('CPU Cycles')
+title('Python to C++ Transmission Time', 'FontSize', 18);
+xlabel('Test Case (seed number)', 'FontSize', 16);
+ylabel('CPU Cycles', 'FontSize', 16)

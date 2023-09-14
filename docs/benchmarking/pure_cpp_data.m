@@ -29,10 +29,10 @@ for i = 1 : 2
     errorbar_x(:, i) = h(1, i).XEndPoints';
 end
 hold on;
-errorbar(errorbar_x, cycle_mean, cycle_stddev, 'LineStyle', 'none');
+errorbar(errorbar_x, cycle_mean, cycle_stddev, 'LineStyle', 'none', 'LineWidth', 2);
 hold off;
 ylim([0, 1e6]);
 legend({'msg interface', 'pure c++'});
-title('Processing Time');
-xlabel('Test Case (simulation run)');
-ylabel('CPU Cycles')
+title('Processing Time', 'FontSize', 18);
+xlabel('Test Case (simulation run)', 'FontSize', 16);
+ylabel('CPU Cycles', 'FontSize', 16)

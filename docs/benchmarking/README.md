@@ -17,7 +17,7 @@ branch of ns3-ai.
 of ns3-gym, in which we modified the algorithm to yield the same result
 with ns3-ai.
 
-The results are collected from console output and stored in [a .m file](./gym-interface-data.m)
+The results are collected from console output and stored in [a .m file](./gym_interface_data.m)
 to draw figures with Matlab.
 
 ### Results
@@ -77,7 +77,7 @@ seeding).**
 
 Both sides of the benchmarking code can be found at [benchmark_purecpp branch](https://github.com/ShenMuyuan/ns3-ai/tree/benchmark_purecpp).
 
-The results are collected from console output and stored in [a .m file](./pure-cpp-data.m)
+The results are collected from console output and stored in [a .m file](./pure_cpp_data.m)
 to draw figures with Matlab.
 
 ### Results
