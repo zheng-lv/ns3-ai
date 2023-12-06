@@ -340,6 +340,7 @@ TcpTimeStepEnv::GetObservation() //初始化
     box->AddValue(m_tcb->m_cWnd);
     box->AddValue(m_tcb->m_segmentSize);
 
+    //向 box 中添加与 TCP（传输控制协议）相关的各种参数，如套接字 UUID、节点 ID、慢启动阈值、拥塞窗口、段大小、在飞行中的字节数、已确认的段数、平均往返时延（RTT）、最小 RTT、平均传输间隔、平均接收间隔和吞吐量。
     // bytesInFlightSum
     uint64_t bytesInFlightSum = std::accumulate(m_bytesInFlight.begin(), m_bytesInFlight.end(), 0);
     box->AddValue(bytesInFlightSum);
@@ -411,110 +412,146 @@ TcpTimeStepEnv::GetObservation() //初始化
     m_interRxTimeNum = 0;
     m_interRxTimeSum = MicroSeconds(0.0);
 
-    return box;
+    return box;//返回 box，可能用作强化学习代理的观测数据。
 }
 
 void
 TcpTimeStepEnv::TxPktTrace(Ptr<const Packet>, const TcpHeader&, Ptr<const TcpSocketBase>)
+//一个用于跟踪 TCP 数据包传输的函数 TxPktTrace
+//返回类型为 void，表示不返回任何值。
+//函数名为 TxPktTrace。
+//接受三个参数：
+//Ptr<const Packet>：指向常量数据包的指针。
+//const TcpHeader&：TCP 头部的常量引用。
+//Ptr<const TcpSocketBase>：指向常量 TCP 套接字基类的指针。
 {
-    NS_LOG_FUNCTION(this);
-    if (m_lastPktTxTime > MicroSeconds(0.0))
+    NS_LOG_FUNCTION(this); //使用 NS-3 的日志功能记录函数调用，包括当前对象的地址（this）。
+    if (m_lastPktTxTime > MicroSeconds(0.0))  //检查 m_lastPktTxTime 是否大于零，即上一个数据包传输时间是否已经记录。
     {
         Time interTxTime = Simulator::Now() - m_lastPktTxTime;
         m_interTxTimeSum += interTxTime;
         m_interTxTimeNum++;
+        //如果上一个数据包传输时间已经记录，计算当前时间与上一个数据包传输时间的时间间隔，并将其加到 m_interTxTimeSum 中，同时增加 m_interTxTimeNum 计数器。
     }
 
-    m_lastPktTxTime = Simulator::Now();
+    m_lastPktTxTime = Simulator::Now(); //更新 m_lastPktTxTime 为当前模拟时间，以备下一次调用时使用。
 }
 
 void
 TcpTimeStepEnv::RxPktTrace(Ptr<const Packet>, const TcpHeader&, Ptr<const TcpSocketBase>)
+//一个用于跟踪 TCP 数据包接收的函数 RxPktTrace
 {
     NS_LOG_FUNCTION(this);
-    if (m_lastPktRxTime > MicroSeconds(0.0))
+    if (m_lastPktRxTime > MicroSeconds(0.0))  //检查 m_lastPktRxTime 是否大于零，即上一个数据包接收时间是否已经记录。
     {
         Time interRxTime = Simulator::Now() - m_lastPktRxTime;
         m_interRxTimeSum += interRxTime;
         m_interRxTimeNum++;
+        //如果上一个数据包接收时间已经记录，计算当前时间与上一个数据包接收时间的时间间隔，并将其加到 m_interRxTimeSum 中，同时增加 m_interRxTimeNum 计数器。
     }
 
-    m_lastPktRxTime = Simulator::Now();
+    m_lastPktRxTime = Simulator::Now(); //更新 m_lastPktRxTime 为当前模拟时间，以备下一次调用时使用。
 }
 
+
+////返回类型：
+//uint32_t，表示该函数返回一个 32 位的无符号整数。
+//参数：
+//Ptr<const TcpSocketState> tcb：指向常量 TcpSocketState 对象的指针。
+//uint32_t bytesInFlight：表示当前传输的字节数。
+//目的是获取慢启动阈值（Slow Start Threshold），并在此过程中记录相关的信息，如字节数和模拟时间。在函数执行的过程中，可能还会触发一些状态更新或调度，
 uint32_t
 TcpTimeStepEnv::GetSsThresh(Ptr<const TcpSocketState> tcb, uint32_t bytesInFlight)
 {
     NS_LOG_FUNCTION(this);
     NS_LOG_INFO(Simulator::Now() << " Node: " << m_nodeId
                                  << " GetSsThresh, BytesInFlight: " << bytesInFlight);
-    m_tcb = tcb;
-    m_bytesInFlight.push_back(bytesInFlight);
+    //使用 NS-3 的日志功能记录函数调用，包括当前对象的地址（this）、模拟时间、节点 ID 以及当前的字节数。
+    
+    m_tcb = tcb;  //将传递给函数的 tcb 参数保存到成员变量 m_tcb 中。
+    m_bytesInFlight.push_back(bytesInFlight);  //将当前的 bytesInFlight 添加到成员变量 m_bytesInFlight 中，这是一个存储字节数的容器。
 
     if (!m_started)
     {
         m_started = true;
         //        Notify();
         ScheduleNextStateRead();
+        //如果 m_started 为假（false），表示这是第一次调用该函数，则将 m_started 设为真（true），并调度下一个状态读取（ScheduleNextStateRead）。
     }
 
     // action
-    return m_new_ssThresh;
+    return m_new_ssThresh;  //返回成员变量 m_new_ssThresh，该变量表示新的慢启动阈值。
 }
 
+//该函数的目的是增加 TCP 拥塞窗口的大小，并在此过程中记录相关的信息，如被确认的数据段数量和模拟时间。
+//Ptr<TcpSocketState> tcb：指向 TcpSocketState 对象的指针，表示 TCP 套接字的状态。
+//uint32_t segmentsAcked：表示被确认的数据段数量。
 void
 TcpTimeStepEnv::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 {
     NS_LOG_FUNCTION(this);
     NS_LOG_INFO(Simulator::Now() << " Node: " << m_nodeId
                                  << " IncreaseWindow, SegmentsAcked: " << segmentsAcked);
-    m_tcb = tcb;
-    m_segmentsAcked.push_back(segmentsAcked);
-    m_bytesInFlight.push_back(tcb->m_bytesInFlight);
+    m_tcb = tcb;  //将传递给函数的 tcb 参数保存到成员变量 m_tcb 中，表示当前 TCP 套接字的状态。
+    m_segmentsAcked.push_back(segmentsAcked);  //将 segmentsAcked 添加到成员变量 m_segmentsAcked 中，这是一个存储被确认数据段数量的容器。
+    m_bytesInFlight.push_back(tcb->m_bytesInFlight); //将套接字的字节数添加到成员变量 m_bytesInFlight 中，这是一个存储字节数的容器。
 
     if (!m_started)
     {
         m_started = true;
         //        Notify();
         ScheduleNextStateRead();
+        //如果 m_started 为假（false），表示这是第一次调用该函数，则将 m_started 设为真（true），并调度下一个状态读取（ScheduleNextStateRead）
     }
-    // action
+    // action 执行动作（action），即将套接字状态中的拥塞窗口大小 m_cWnd 更新为成员变量 m_new_cWnd。
     tcb->m_cWnd = m_new_cWnd;
 }
 
+//处理数据包被确认的事件，记录相关信息如被确认的数据段数量和往返时延，
+//Ptr<TcpSocketState> tcb：指向 TcpSocketState 对象的指针，表示 TCP 套接字的状态。
+//uint32_t segmentsAcked：表示被确认的数据段数量。
+//const Time& rtt：表示往返时延（Round-Trip Time）。
 void
 TcpTimeStepEnv::PktsAcked(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time& rtt)
 {
     NS_LOG_FUNCTION(this);
     NS_LOG_INFO(Simulator::Now() << " Node: " << m_nodeId << " PktsAcked, SegmentsAcked: "
                                  << segmentsAcked << " Rtt: " << rtt);
-    m_tcb = tcb;
-    m_rttSum += rtt;
+    m_tcb = tcb;  //将传递给函数的 tcb 参数保存到成员变量 m_tcb 中，表示当前 TCP 套接字的状态
+    m_rttSum += rtt;  //将往返时延 rtt 累加到成员变量 m_rttSum 中，并增加 m_rttSampleNum。
     m_rttSampleNum++;
 }
 
+//该函数的目的是设置拥塞状态，并记录相关信息。在实际的网络仿真中，TCP 协议会根据网络状况动态调整拥塞窗口大小，以实现网络的高效利用。拥塞状态的改变可能触发一系列操作，如调整拥塞窗口大小、改变传输速率等。
+//Ptr<TcpSocketState> tcb：指向 TcpSocketState 对象的指针，表示 TCP 套接字的状态。
+//const TcpSocketState::TcpCongState_t newState：表示设置的拥塞状态。
 void
 TcpTimeStepEnv::CongestionStateSet(Ptr<TcpSocketState> tcb,
                                    const TcpSocketState::TcpCongState_t newState)
 {
+    //使用 NS-3 的日志功能记录函数调用，包括当前对象的地址（this）、模拟时间、节点 ID、设置的拥塞状态值和状态名称。
     NS_LOG_FUNCTION(this);
     std::string stateName = GetTcpCongStateName(newState);
     NS_LOG_INFO(Simulator::Now() << " Node: " << m_nodeId << " CongestionStateSet: " << newState
                                  << " " << stateName);
-    m_tcb = tcb;
+    m_tcb = tcb; //将传递给函数的 tcb 参数保存到成员变量 m_tcb 中，表示当前 TCP 套接字的状态。
 }
 
+//是处理与 TCP 拥塞控制相关的事件
+//该函数接受一个 Ptr<TcpSocketState> 类型的参数 tcb，表示一个指向 TcpSocketState 对象的智能指针。该对象表示 TCP 套接字状态，其中包含有关当前连接的信息。
+//函数还接受一个 TcpSocketState::TcpCAEvent_t 类型的参数 event，表示一个 TcpCAEvent_t 类型的事件。TcpCAEvent_t 是一个枚举类型，定义了与 TCP 拥塞控制相关的事件类型。
 void
 TcpTimeStepEnv::CwndEvent(Ptr<TcpSocketState> tcb, const TcpSocketState::TcpCAEvent_t event)
 {
     NS_LOG_FUNCTION(this);
-    std::string eventName = GetTcpCAEventName(event);
+    std::string eventName = GetTcpCAEventName(event); //使用 GetTcpCAEventName() 方法将事件类型转换为一个字符串，并将其存储在 eventName 变量中。
+    //它使用 NS_LOG_INFO() 宏记录一个日志消息，其中包含当前时间、节点 ID、事件类型和事件名称。
     NS_LOG_INFO(Simulator::Now() << " Node: " << m_nodeId << " CwndEvent: " << event << " "
                                  << eventName);
-    m_tcb = tcb;
+    m_tcb = tcb;  //该函数将 tcb 变量赋值为传入的 tcb 参数，以便在后续操作中使用。
 }
 
-NS_OBJECT_ENSURE_REGISTERED(TcpEventBasedEnv);
+NS_OBJECT_ENSURE_REGISTERED(TcpEventBasedEnv); //确保 TcpEventBasedEnv 类在运行时被注册到对象系统中。
 
 TcpEventBasedEnv::TcpEventBasedEnv()
     : TcpEnvBase()
@@ -533,7 +570,7 @@ TcpEventBasedEnv::GetTypeId()
     static TypeId tid = TypeId("ns3::TcpEventBasedEnv")
                             .SetParent<TcpEnvBase>()
                             .SetGroupName("Ns3Ai")
-                            .AddConstructor<TcpEventBasedEnv>();
+                            .AddConstructor<TcpEventBasedEnv>();//AddConstructor<TcpEventBasedEnv>(); 是一个模板方法，它接受一个类型参数 TcpEventBasedEnv，表示要注册构造函数的类。该方法将注册 TcpEventBasedEnv 类的默认构造函数，以便在运行时可以创建该类的对象。
 
     return tid;
 }
@@ -544,18 +581,20 @@ TcpEventBasedEnv::DoDispose()
     NS_LOG_FUNCTION(this);
 }
 
+//通过调用 TcpEventBasedEnv::SetReward() 函数，你可以设置 TcpEventBasedEnv 类的奖励值。奖励值通常用于强化学习算法中，表示环境对智能体的奖励或惩罚。通过设置奖励值，你可以影响智能体的学习行为和策略。
 void
 TcpEventBasedEnv::SetReward(float value)
 {
     NS_LOG_FUNCTION(this);
-    m_reward = value;
+    m_reward = value; //该函数接受一个浮点数类型的参数 value，并将其赋值给类的成员变量 m_reward。
 }
 
+//通过调用 TcpEventBasedEnv::SetPenalty() 函数，你可以设置 TcpEventBasedEnv 类的惩罚值。惩罚值通常用于强化学习算法中，表示环境对智能体的惩罚或负面反馈。通过设置惩罚值，你可以影响智能体的学习行为和策略。
 void
 TcpEventBasedEnv::SetPenalty(float value)
 {
     NS_LOG_FUNCTION(this);
-    m_penalty = value;
+    m_penalty = value; //该函数接受一个浮点数类型的参数 value，并将其赋值给类的成员变量 m_penalty。
 }
 
 /*
@@ -579,14 +618,15 @@ TcpEventBasedEnv::GetObservationSpace()
     // congetsion algorithm (CA) state
     // CA event
     // ECN state
-    uint32_t parameterNum = 15;
+    uint32_t parameterNum = 15; //定义了一个名为 parameterNum 的变量，它表示空间中元素的数量。
     float low = 0.0;
-    float high = 1000000000.0;
+    float high = 1000000000.0;  //定义了一个名为 low 和 high 的变量，它们分别表示空间中元素的最小值和最大值
     std::vector<uint32_t> shape = {
         parameterNum,
-    };
+    }; //它创建了一个包含 parameterNum 个元素的向量 shape，并将其数据类型设置为 TypeNameGet<uint64_t>()。
     std::string dtype = TypeNameGet<uint64_t>();
 
+    //它使用 CreateObject<OpenGymBoxSpace>() 函数创建了一个 OpenGym 盒子空间，并将其返回。
     Ptr<OpenGymBoxSpace> box = CreateObject<OpenGymBoxSpace>(low, high, shape, dtype);
     NS_LOG_INFO("MyGetObservationSpace: " << box);
     return box;
@@ -604,7 +644,10 @@ TcpEventBasedEnv::GetObservation()
     };
 
     Ptr<OpenGymBoxContainer<uint64_t>> box = CreateObject<OpenGymBoxContainer<uint64_t>>(shape);
+//该函数创建了一个 OpenGym 数据容器，该容器用于表示从环境中观察到的状态。该容器的形状是一个包含 15 个元素的向量，每个元素的类型是 uint64_t
 
+    //该函数使用 AddValue() 方法将一些值添加到容器中
+    //这些值包括：socketUuid、0（可能是一个占位符）、当前时间（以微秒为单位）、节点 ID、ssThresh、cWnd、segmentSize、segmentsAcked、bytesInFlight、rtt（往返时间）、minRtt（最小往返时间）、calledFunc、congState（拥塞状态）、event（事件）和 ecnState（ECN 状态）。
     box->AddValue(m_socketUuid);
     box->AddValue(0);
     box->AddValue(Simulator::Now().GetMicroSeconds());
@@ -621,44 +664,51 @@ TcpEventBasedEnv::GetObservation()
     box->AddValue(m_event);
     box->AddValue(m_tcb->m_ecnState);
 
-    // Print data
+    // Print data 该函数打印容器中的数据，并返回容器本身。
     NS_LOG_INFO("MyGetObservation: " << box);
     return box;
 }
 
+//该函数接受三个参数：一个指向 const Packet 对象的指针、一个 const TcpHeader 对象和一个指向 const TcpSocketBase 对象的指针。
+//这些参数表示要传输的数据包、数据包的 TCP 头部和与该数据包相关的 TcpSocketBase 对象。
 void
 TcpEventBasedEnv::TxPktTrace(Ptr<const Packet>, const TcpHeader&, Ptr<const TcpSocketBase>)
 {
     NS_LOG_FUNCTION(this);
 }
 
+//该函数接受三个参数：一个指向 const Packet 对象的指针、一个 const TcpHeader 对象和一个指向 const TcpSocketBase 对象的指针。这些参数表示接收到的数据包、数据包的 TCP 头部和与该数据包相关的 TcpSocketBase 对象。
 void
 TcpEventBasedEnv::RxPktTrace(Ptr<const Packet>, const TcpHeader&, Ptr<const TcpSocketBase>)
 {
     NS_LOG_FUNCTION(this);
 }
 
+//该函数接受两个参数：一个指向 const TcpSocketState 对象的指针 tcb 和一个表示当前飞行中的字节数的 uint32_t 类型的变量 bytesInFlight。
 uint32_t
 TcpEventBasedEnv::GetSsThresh(Ptr<const TcpSocketState> tcb, uint32_t bytesInFlight)
 {
-    NS_LOG_FUNCTION(this);
-    // pkt was lost, so penalty
+    NS_LOG_FUNCTION(this); //首先使用 NS_LOG_FUNCTION() 宏记录函数的调用信息，包括函数名和当前对象的指针。
+    // pkt was lost, so penalty 
     m_envReward = m_penalty;
 
     NS_LOG_INFO(Simulator::Now() << " Node: " << m_nodeId
                                  << " GetSsThresh, BytesInFlight: " << bytesInFlight);
+    //函数设置了一些变量的值，包括 m_envReward、m_calledFunc、m_info、m_tcb 和 m_bytesInFlight，并调用了 Notify() 函数。
     m_calledFunc = CalledFunc_t::GET_SS_THRESH;
     m_info = "GetSsThresh";
     m_tcb = tcb;
     m_bytesInFlight = bytesInFlight;
     Notify();
-    return m_new_ssThresh;
+    return m_new_ssThresh;  //函数返回一个 uint32_t 类型的值 m_new_ssThresh，但没有说明该值的具体含义。
 }
 
+//Ptr<TcpSocketState> tcb：指向 TcpSocketState 对象的指针，表示 TCP 套接字的状态。
+//uint32_t segmentsAcked：表示已被确认的 TCP 段的数量。
 void
 TcpEventBasedEnv::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 {
-    NS_LOG_FUNCTION(this);
+    NS_LOG_FUNCTION(this); //使用 NS-3 的日志功能记录函数调用，包括当前对象的地址（this）、模拟时间、节点 ID 和已确认的 TCP 段数量。
     // pkt was acked, so reward
     m_envReward = m_reward;
 
@@ -667,17 +717,19 @@ TcpEventBasedEnv::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked
     m_calledFunc = CalledFunc_t::INCREASE_WINDOW;
     m_info = "IncreaseWindow";
     m_tcb = tcb;
-    m_segmentsAcked = segmentsAcked;
-    Notify();
+    m_segmentsAcked = segmentsAcked; //将传递给函数的 segmentsAcked 参数保存到成员变量 m_segmentsAcked 中，表示已确认的 TCP 段的数量。
+    Notify(); //通过调用 Notify() 函数通知相关的观察者（observers）。
     tcb->m_cWnd = m_new_cWnd;
 }
 
+//该函数接受三个参数：一个指向 TcpSocketState 对象的指针 tcb，一个表示确认的数据包数的 uint32_t 类型的变量 segmentsAcked，以及一个表示往返时间（Round Trip Time，RTT）的 Time 对象 rtt。
 void
 TcpEventBasedEnv::PktsAcked(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time& rtt)
 {
-    NS_LOG_FUNCTION(this);
+    NS_LOG_FUNCTION(this); //首先使用 NS_LOG_FUNCTION() 宏记录函数的调用信息，包括函数名和当前对象的指针。
     NS_LOG_INFO(Simulator::Now() << " Node: " << m_nodeId << " PktsAcked, SegmentsAcked: "
-                                 << segmentsAcked << " Rtt: " << rtt);
+                                 << segmentsAcked << " Rtt: " << rtt); //它使用 NS_LOG_INFO() 宏记录一些日志信息，包括当前时间、节点 ID、确认的数据包数和 RTT。
+   //函数设置了一些变量的值，包括 m_calledFunc、m_info、m_tcb 和 m_segmentsAcked。这些变量可能在函数的后续操作中使用。
     m_calledFunc = CalledFunc_t::PKTS_ACKED;
     m_info = "PktsAcked";
     m_tcb = tcb;
@@ -685,17 +737,21 @@ TcpEventBasedEnv::PktsAcked(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, con
     m_rtt = rtt;
 }
 
+//用于记录 TCP 拥塞状态变更事件的函数
 void
 TcpEventBasedEnv::CongestionStateSet(Ptr<TcpSocketState> tcb,
                                      const TcpSocketState::TcpCongState_t newState)
 {
     NS_LOG_FUNCTION(this);
+    //用于记录 TCP 拥塞状态变更事件的函数
     std::string stateName = GetTcpCongStateName(newState);
+    //// 输出信息级别的日志，记录节点 ID、拥塞状态值和对应的状态字符串
     NS_LOG_INFO(Simulator::Now() << " Node: " << m_nodeId << " CongestionStateSet: " << newState
                                  << " " << stateName);
 
-    m_calledFunc = CalledFunc_t::CONGESTION_STATE_SET;
-    m_info = "CongestionStateSet";
+    //// 记录函数调用
+    m_calledFunc = CalledFunc_t::CONGESTION_STATE_SET; //记录函数调用类型为 CONGESTION_STATE_SET，这可能是一个用于在类内部跟踪函数调用的成员变量。
+    m_info = "CongestionStateSet"; //记录函数调用类型为 CONGESTION_STATE_SET，这可能是一个用于在类内部跟踪函数调用的成员变量。
     m_tcb = tcb;
 }
 
