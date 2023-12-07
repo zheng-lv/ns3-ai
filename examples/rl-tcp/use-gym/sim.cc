@@ -52,16 +52,16 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("rl-tcp-example");
 
-static std::vector<uint32_t> rxPkts;  //rxPkts 变量可能用于存储接收到的数据包的相关信息，其中每个元素代表一个数据包。具体来说，它可能存储了每个数据包的编号或其他标识符。这意味着 rxPkts 变量在程序的不同部分都可以访问和使用，而不需要通过函数参数或其他方式进行传递。
+static std::vector<uint32_t> rxPkts;  //rxPkts 是一个用于记录接收数据包数量的全局变量。
 
-//这个函数可能用于统计每个接收器或目的地接收到的数据包数量。通过递增对应的计数器，可以跟踪每个接收器接收到的数据包数量。
+//是一个回调函数，用于统计接收数据包的数量。这个函数可能用于统计每个接收器或目的地接收到的数据包数量。通过递增对应的计数器，可以跟踪每个接收器接收到的数据包数量。
 static void
 CountRxPkts(uint32_t sinkId, Ptr<const Packet> packet, const Address& srcAddr) //rxPkts 可能是一个向量，其中每个元素表示一个接收数据包的计数器。sinkId 可能是一个标识符，用于唯一标识接收数据包的目的地或接收器。packet 可能是一个指向接收到的数据包的指针，包含了数据包的内容。srcAddr 可能是源地址，用于标识发送数据包的源节点或设备。
 {
     rxPkts[sinkId]++; //使用 rxPkts[sinkId] 来访问静态向量 rxPkts 中与 sinkId 对应的元素，并将其值递增 1。
 }
 
-//用于在程序运行期间打印接收数据包的计数器，以提供关于接收数据包数量的信息。它可以帮助调试或监控网络通信或数据包处理过程。
+//是一个用于打印接收数据包数量的函数。用于在程序运行期间打印接收数据包的计数器，以提供关于接收数据包数量的信息。它可以帮助调试或监控网络通信或数据包处理过程。
 static void
 PrintRxCount()
 {
