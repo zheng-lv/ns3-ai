@@ -48,12 +48,15 @@ OpenGymEnv::GetTypeId()
     static TypeId tid = TypeId("ns3::OpenGymEnv").SetParent<Object>().SetGroupName("OpenGym");
     return tid;
 }
-
+/*将 OpenGymEnv 类的成员函数与 Python 端的 OpenGymInterface 进行关联，以实现在 Python 端请求环境信息时的回调。
+*这种关联使得在Python端请求相关信息时，能够调用 OpenGymEnv 中定义的对应成员函数，从而实现与Python端的通信。
+*/
 void
 OpenGymEnv::SetOpenGymInterface(Ptr<OpenGymInterface> openGymInterface)
 {
-    NS_LOG_FUNCTION(this);
-    m_openGymInterface = openGymInterface;
+    NS_LOG_FUNCTION(this);//这是一个NS-3网络模拟器中的日志宏，用于记录函数调用。在这里，它用于记录 SetOpenGymInterface 函数的调用。
+    m_openGymInterface = openGymInterface;//将成员变量 m_openGymInterface 设置为传入的 openGymInterface 智能指针。这个指针用于与Python端通信。
+    //使用 MakeCallback 函数为 openGymInterface 设置各种回调函数，以便在 Python 端请求相关信息时，能够调用 OpenGymEnv 对应的成员函数。
     openGymInterface->SetGetActionSpaceCb(MakeCallback(&OpenGymEnv::GetActionSpace, this));
     openGymInterface->SetGetObservationSpaceCb(
         MakeCallback(&OpenGymEnv::GetObservationSpace, this));
