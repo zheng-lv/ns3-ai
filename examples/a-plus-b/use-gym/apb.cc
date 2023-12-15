@@ -24,7 +24,7 @@
 #include <iostream>
 #include <random>
 
-#define NUM_ENV 10000
+#define NUM_ENV 10000  //是一个预处理器指令，用于定义一个常量 NUM_ENV，并将其赋值为 10000。
 
 namespace ns3
 {
