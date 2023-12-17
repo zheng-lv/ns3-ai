@@ -26,8 +26,8 @@
 
 struct Ns3AiGymMsg
 {
-    uint8_t buffer[MSG_BUFFER_SIZE];
-    uint32_t size;
+    uint8_t buffer[MSG_BUFFER_SIZE];//包含一个 uint8_t 类型的数组 buffer，用于存储消息数据，
+    uint32_t size;//uint32_t 类型的变量 size，用于表示消息的大小。
 };
 
-#endif // NS3_NS3_AI_GYM_MSG_H
+#endif // NS3_NS3_AI_GYM_MSG_H 定义了一个结构体，用于在 ns-3 网络模拟器中发送和接收 gym 消息。这个结构体包含一个用于存储消息数据的缓冲区和一个用于表示消息大小的变量
