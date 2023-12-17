@@ -2,8 +2,15 @@ syntax = "proto3";
 import "google/protobuf/any.proto";
 
 package ns3_ai_gym;
-
+//使用 Protocol Buffers（protobuf）语法版本 "proto3" 编写的文件。它定义了在 NS3（Network Simulator 3）环境中的不同组件之间进行通信的一组消息类型。让我们逐个了解其中的关键元素：
 //---------Types----------//
+/*
+枚举类型 (MsgType、SpaceType、Dtype)：
+
+MsgType：代表不同的消息类型，如初始化、动作空间、观察空间等。
+SpaceType：描述不同类型的空间（例如 Discrete、Box、Tuple、Dict）。
+Dtype：指定数据类型（例如 INT、UINT、FLOAT、DOUBLE）。
+*/
 enum MsgType {
 	Unknown = 0;
 	Init = 1;
@@ -35,6 +42,17 @@ enum Dtype {
 //------------------------//
 
 //---Space Descriptions---//
+/*
+消息类型
+SpaceDescription：描述空间属性的消息类型（例如类型、名称、空间定义）。
+DiscreteSpace、BoxSpace、TupleSpace、DictSpace：具有相关属性的特定空间类型。
+DataContainer：表示保存与特定空间类型相关的数据的容器。
+DiscreteDataContainer、BoxDataContainer、TupleDataContainer、DictDataContainer：不同空间类型的数据容器。
+SimInitMsg：用于初始化模拟的消息，包括观察和动作空间的描述。
+SimInitAck：模拟初始化的确认消息。
+EnvStateMsg：表示环境状态的消息，包括观察数据、奖励、游戏结束状态、原因和其他信息。
+EnvActMsg：表示在环境中采取的动作的消息。
+*/
 message SpaceDescription {
 	SpaceType type = 1;
 	google.protobuf.Any space = 2;
