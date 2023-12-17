@@ -5,11 +5,15 @@ import messages_pb2 as pb
 import ns3ai_gym_msg_py as py_binding
 from ns3ai_utils import Experiment
 
-
+//这个类的目的是将NS3网络仿真嵌入到OpenAI Gym环境中，使得可以使用Gym的标准接口与NS3进行交互。类中的各个方法负责处理环境初始化、动作的发送与接收、环境状态的获取等任务。
 class Ns3Env(gym.Env):
     _created = False
 
     def _create_space(self, spaceDesc):
+        # 创建Gym Space对象，根据传入的Space描述
+        # Discrete、Box、Tuple、Dict分别对应不同的Space类型
+        # 返回相应的Gym Space对象
+        # ...
         space = None
         if spaceDesc.type == pb.Discrete:
             discreteSpacePb = pb.DiscreteSpace()
@@ -61,6 +65,10 @@ class Ns3Env(gym.Env):
         return space
 
     def _create_data(self, dataContainerPb):
+        # 根据DataContainer的类型创建相应的数据结构
+        # Discrete、Box、Tuple、Dict分别对应不同的数据类型
+        # 返回相应的Python数据对象
+        # ...
         if dataContainerPb.type == pb.Discrete:
             discreteContainerPb = pb.DiscreteDataContainer()
             dataContainerPb.data.Unpack(discreteContainerPb)
@@ -110,6 +118,9 @@ class Ns3Env(gym.Env):
             return data
 
     def initialize_env(self):
+         # 初始化环境，获取初始状态
+        # ...
+
         simInitMsg = pb.SimInitMsg()
         self.msgInterface.PyRecvBegin()
         request = self.msgInterface.GetCpp2PyStruct().get_buffer()
@@ -132,6 +143,8 @@ class Ns3Env(gym.Env):
         return True
 
     def send_close_command(self):
+        # 发送关闭命令给NS3仿真
+        # ...
         reply = pb.EnvActMsg()
         reply.stopSimReq = True
 
@@ -146,6 +159,9 @@ class Ns3Env(gym.Env):
         return True
 
     def rx_env_state(self):
+        # 接收NS3仿真的环境状态
+        # 更新obsData、reward、gameOver等状态信息
+        # ...
         if self.newStateRx:
             return
 
@@ -170,18 +186,29 @@ class Ns3Env(gym.Env):
         self.newStateRx = True
 
     def get_obs(self):
+         # 返回当前的观测值
+        # ...
         return self.obsData
 
     def get_reward(self):
+        # 返回当前的奖励值
+        # ...
         return self.reward
 
     def is_game_over(self):
+        # 检查是否游戏结束
+        # ...
         return self.gameOver
 
     def get_extra_info(self):
+        # 检查是否游戏结束
+        # ...
         return self.extraInfo
 
     def _pack_data(self, actions, spaceDesc):
+        # 将动作打包成DataContainer对象
+        # 根据Space类型，选择相应的打包方式
+        # ...
         dataContainer = pb.DataContainer()
 
         spaceType = spaceDesc.__class__
@@ -250,6 +277,8 @@ class Ns3Env(gym.Env):
         return dataContainer
 
     def send_actions(self, actions):
+        # 发送动作给NS3仿真
+        # ...
         reply = pb.EnvActMsg()
 
         actionMsg = self._pack_data(actions, self.action_space)
@@ -265,6 +294,9 @@ class Ns3Env(gym.Env):
         return True
 
     def get_state(self):
+        # 返回当前的环境状态
+        # 包括观测值、奖励、游戏是否结束等信息
+        # ...
         obs = self.get_obs()
         reward = self.get_reward()
         done = self.is_game_over()
@@ -272,6 +304,7 @@ class Ns3Env(gym.Env):
         return obs, reward, done, False, extraInfo
 
     def __init__(self, targetName, ns3Path, ns3Settings=None, shmSize=4096):
+        # 初始化NS3环境
         if self._created:
             raise Exception('Error: Ns3Env is singleton')
         self._created = True
@@ -292,12 +325,16 @@ class Ns3Env(gym.Env):
         self.envDirty = False
 
     def step(self, actions):
+        # 执行一步动作，发送动作给NS3仿真，接收环境状态
+        # 返回新的环境状态
         self.send_actions(actions)
         self.rx_env_state()
         self.envDirty = True
         return self.get_state()
 
     def reset(self, seed=None, options=None):
+        # 重置环境，重新开始仿真
+        # ...
         if not self.envDirty:
             obs = self.get_obs()
             return obs, {}
@@ -325,13 +362,16 @@ class Ns3Env(gym.Env):
         return obs, {}
 
     def render(self, mode='human'):
+        # 渲染环境，可以选择不实现
         return
 
     def get_random_action(self):
+         # 返回一个随机的动作，用于随机策略
         act = self.action_space.sample()
         return act
 
     def close(self):
+        # 关闭环境，终止NS3仿真
         # environment is not needed anymore, so kill subprocess in a straightforward way
         self.exp.kill()
         # destroy the message interface and its shared memory segment
