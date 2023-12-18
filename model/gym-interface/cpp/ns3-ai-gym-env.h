@@ -99,7 +99,7 @@ class OpenGymEnv : public Object
     void DoInitialize() override;
     void DoDispose() override;
 
-    Ptr<OpenGymInterface> m_openGymInterface; m_openGymInterface 是指向 OpenGymInterface 对象的智能指针，用于与Python端通信。
+    Ptr<OpenGymInterface> m_openGymInterface; //m_openGymInterface 是指向 OpenGymInterface 对象的智能指针，用于与Python端通信。
 
   private:
 };
